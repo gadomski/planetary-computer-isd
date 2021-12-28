@@ -22,8 +22,9 @@ class BlobStorage:
 class Dask:
     """Dask configuration"""
 
-    minimum: int
-    maximum: int
+    num_workers: int
+    worker_cores: Optional[int]
+    worker_memory: Optional[int]
 
 
 @serde
@@ -78,6 +79,11 @@ class Config:
     def start_dask_cluster(self) -> GatewayCluster:
         """Starts a Dask cluster."""
         gateway = Gateway()
+        options = gateway.cluster_options()
+        if self.dask.worker_cores:
+            options["worker_cores"] = self.dask.worker_cores
+        if self.dask.worker_memory:
+            options["worker_memory"] = self.dask.worker_memory
         cluster = gateway.new_cluster()
         plugin = PipInstall(
             packages=[
@@ -87,5 +93,5 @@ class Config:
         )
         client = cluster.get_client()
         client.register_worker_plugin(plugin)
-        cluster.adapt(self.dask.minimum, self.dask.maximum)
+        cluster.scale(self.dask.num_workers)
         return cluster
