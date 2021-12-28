@@ -18,9 +18,10 @@ logger = logging.getLogger(__name__)
 class Converter:
     """Converts source ISD files to parquet tables."""
 
-    def __init__(self, reader: Client, writer: Client):
+    def __init__(self, reader: Client, writer: Client, periods: int):
         self._reader = reader
         self._writer = writer
+        self._periods = periods
 
     def convert(self, overwrite: bool = False) -> None:
         existing_paths = list(self._writer.list())
@@ -49,7 +50,7 @@ class Converter:
                 dask.delayed(self._reader.read_data_frame)(path) for path in years[year]
             ]
             full_year_persisted = dask.persist(*full_year_delayed)
-            for start, end in intervals(year):
+            for start, end in intervals(year, self._periods):
                 windowed_delayed = [
                     dask.delayed(window)(data_frame, start, end)
                     for data_frame in full_year_persisted
@@ -77,13 +78,13 @@ def separate_into_years(paths: List[str]) -> Dict[int, List[str]]:
     return years
 
 
-def intervals(year: int) -> List[Tuple[datetime, datetime]]:
+def intervals(year: int, periods: int) -> List[Tuple[datetime, datetime]]:
     """Returns reasonable parquet partition intervals for the given year."""
     range = list(
         pandas.date_range(
             start=datetime(year, 1, 1),
             end=datetime(year + 1, 1, 1),
-            periods=24,
+            periods=periods,
         ).normalize()
     )
     return [(a, b) for a, b in zip(range, range[1:])]

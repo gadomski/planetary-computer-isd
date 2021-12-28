@@ -35,6 +35,7 @@ class Config:
     source: BlobStorage
     target: BlobStorage
     dask: Dask
+    periods: int
 
     @classmethod
     def from_path(cls, path: str) -> "Config":
@@ -75,6 +76,7 @@ class Config:
         return Converter(
             self.reader(prefix=source_prefix, limit=source_limit),
             self.writer(prefix=target_prefix),
+            self.periods,
         )
 
     def start_dask_cluster(self) -> GatewayCluster:
