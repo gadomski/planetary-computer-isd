@@ -1,0 +1,5 @@
+gateway:
+  address: https://pccompute.westeurope.cloudapp.azure.com/compute/services/dask-gateway
+  proxy-address: gateway://pccompute-dask.westeurope.cloudapp.azure.com:80
+  auth:
+    type: jupyterhub
