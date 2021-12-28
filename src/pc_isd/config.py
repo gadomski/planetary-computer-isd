@@ -22,7 +22,8 @@ class BlobStorage:
 class Dask:
     """Dask configuration"""
 
-    num_workers: int
+    minimum: int
+    maximum: int
 
 
 @serde
@@ -86,5 +87,5 @@ class Config:
         )
         client = cluster.get_client()
         client.register_worker_plugin(plugin)
-        cluster.scale(self.dask.num_workers)
+        cluster.adapt(self.dask.minimum, self.dask.maximum)
         return cluster
