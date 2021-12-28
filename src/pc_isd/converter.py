@@ -54,9 +54,7 @@ class Converter:
                     dask.delayed(window)(data_frame, start, end)
                     for data_frame in full_year_persisted
                 ]
-                data_frame = dask.dataframe.from_delayed(windowed_delayed).set_index(
-                    "timestamp", divisions=[start, end]
-                )
+                data_frame = dask.dataframe.from_delayed(windowed_delayed)
                 logger.info(
                     f"Writing parquet between {start} and {end} to {self._writer.adlfs_path()} (append={append})"
                 )
