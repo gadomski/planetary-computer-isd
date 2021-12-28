@@ -80,7 +80,8 @@ class Config:
         cluster = gateway.new_cluster()
         cluster.scale(self.dask.num_workers)
         plugin = PipInstall(
-            packages=["git+https://github.com/gadomski/planetary-computer-isd"]
+            packages=["git+https://github.com/gadomski/planetary-computer-isd"],
+            pip_options=["--upgrade"],
         )
         client = cluster.get_client()
         client.register_worker_plugin(plugin)
