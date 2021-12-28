@@ -42,7 +42,16 @@ class Client:
 
     def rm(self, paths: Iterable[str]) -> None:
         """Removes paths."""
-        self._client.delete_blobs(*paths)
+        paths = list(paths)
+        if len(paths) > 256:
+            start = 0
+            end = 256
+            while end <= len(paths):
+                self._client.delete_blobs(*paths[start:end])
+                start += 256
+                end += 256
+        else:
+            self._client.delete_blobs(*paths)
 
     def read_data_frame(self, path: str) -> DataFrame:
         """Reads an ISD file into a DataFrame."""
