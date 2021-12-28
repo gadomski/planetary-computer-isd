@@ -5,9 +5,10 @@ from typing import Optional
 
 import click
 import click_log
+import dask.dataframe
 from click import Context
 
-from pc_isd import Config
+from pc_isd import Client, Config
 
 logger = logging.getLogger("pc_isd")
 click_log.basic_config(logger)
@@ -75,3 +76,15 @@ def convert(
         converter.convert(overwrite=overwrite)
     finally:
         cluster.shutdown()
+
+
+@main.command()
+@click.option("--prefix", default=None, type=str)
+@click.pass_context
+def show(context: Context, prefix: Optional[str]):
+    """Shows the dataframe currently residing at the target."""
+    writer: Client = context.obj.writer(prefix=prefix)
+    data_frame = dask.dataframe.read_parquet(
+        writer.adlfs_path(), storage_options=writer.adlfs_options()
+    )
+    print(data_frame.compute())
