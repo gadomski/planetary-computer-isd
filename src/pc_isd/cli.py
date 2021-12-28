@@ -85,6 +85,6 @@ def show(context: Context, prefix: Optional[str]):
     """Shows the dataframe currently residing at the target."""
     writer: Client = context.obj.writer(prefix=prefix)
     data_frame = dask.dataframe.read_parquet(
-        writer.adlfs_path(), storage_options=writer.adlfs_options()
+        writer.adlfs_path(), storage_options=writer.adlfs_options(), engine="pyarrow"
     )
     print(data_frame.compute())
