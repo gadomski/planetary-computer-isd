@@ -57,9 +57,6 @@ class Converter:
                 data_frame = dask.dataframe.from_delayed(windowed_delayed).set_index(
                     "timestamp", divisions=[start, end]
                 )
-                if len(data_frame) == 0:
-                    logger.warn(f"Skipping {start} to {end}, no rows")
-                    continue
                 logger.info(
                     f"Writing parquet between {start} and {end} to {self._writer.adlfs_path()} (append={append})"
                 )
