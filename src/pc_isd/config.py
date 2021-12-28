@@ -1,5 +1,6 @@
 from typing import Optional
 
+from dask.distributed import PipInstall
 from dask_gateway import Gateway, GatewayCluster
 from serde import serde
 from serde.toml import from_toml
@@ -78,4 +79,9 @@ class Config:
         gateway = Gateway()
         cluster = gateway.new_cluster()
         cluster.scale(self.dask.num_workers)
+        plugin = PipInstall(
+            packages=["git+https://github.com/gadomski/planetary-computer-isd"]
+        )
+        client = cluster.get_client()
+        client.register_worker_plugin(plugin)
         return cluster

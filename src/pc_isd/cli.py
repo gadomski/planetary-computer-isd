@@ -71,7 +71,6 @@ def convert(
     )
     cluster = context.obj.start_dask_cluster()
     print(f"Dask cluster started, dashboard here: {cluster.dashboard_link}")
-    cluster.get_client()
     try:
         converter.convert(overwrite=overwrite)
     finally:
