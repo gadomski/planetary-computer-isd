@@ -84,7 +84,7 @@ class Config:
             options["worker_cores"] = self.dask.worker_cores
         if self.dask.worker_memory:
             options["worker_memory"] = self.dask.worker_memory
-        cluster = gateway.new_cluster()
+        cluster = gateway.new_cluster(options)
         plugin = PipInstall(
             packages=[
                 "git+https://github.com/gadomski/planetary-computer-isd",
