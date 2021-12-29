@@ -1,14 +1,16 @@
 # type: ignore
 
 import logging
+import sys
 from typing import Optional
 
 import click
 import click_log
 import dask.dataframe
 from click import Context
+from dask_gateway import Gateway
 
-from pc_isd import Client, Config
+from pc_isd import Client, Config, Converter
 
 logger = logging.getLogger("pc_isd")
 click_log.basic_config(logger)
@@ -31,6 +33,25 @@ def test_dask(context: Context) -> None:
     cluster = context.obj.start_dask_cluster()
     client = cluster.get_client()
     print(client.get_versions())
+
+
+@main.command()
+@click.pass_context
+def start_dask_cluster(context: Context) -> None:
+    cluster = context.obj.start_dask_cluster()
+    print(f"Cluster dashboard link: {cluster.dashboard_link}")
+
+
+@main.command()
+def stop_dask_clusters() -> None:
+    gateway = Gateway()
+    clusters = gateway.list_clusters()
+    print(f"{len(clusters)} clusters found.")
+    for cluster in clusters:
+        print(f"Stopping {cluster.name}")
+        cluster = gateway.connect(cluster.name)
+        cluster.shutdown()
+    print("Done!")
 
 
 @main.command()
@@ -67,15 +88,22 @@ def convert(
     """Converts ISD files to a parquet table."""
     if year:
         source_prefix = f"{source_prefix}/{year}"
-    converter = context.obj.converter(
-        source_prefix=source_prefix, source_limit=limit, target_prefix=target_prefix
+    gateway = Gateway()
+    clusters = gateway.list_clusters()
+    if not clusters:
+        print("No clusters found in gateway, exiting!")
+        sys.exit(1)
+    elif len(clusters) != 1:
+        print(f"More than one cluster found in gateway, exiting! {clusters}")
+    else:
+        cluster = gateway.connect(clusters[0].name)
+    converter: Converter = context.obj.converter(
+        cluster=cluster,
+        source_prefix=source_prefix,
+        source_limit=limit,
+        target_prefix=target_prefix,
     )
-    cluster = context.obj.start_dask_cluster()
-    print(f"Dask cluster started, dashboard here: {cluster.dashboard_link}")
-    try:
-        converter.convert(overwrite=overwrite)
-    finally:
-        cluster.shutdown()
+    converter.convert(overwrite=overwrite)
 
 
 @main.command()

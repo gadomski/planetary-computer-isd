@@ -8,6 +8,7 @@ import dask
 import dask.dataframe
 import dask.delayed
 import pandas
+from dask_gateway import GatewayCluster
 from pandas import DataFrame
 
 from .client import Client
@@ -18,7 +19,14 @@ logger = logging.getLogger(__name__)
 class Converter:
     """Converts source ISD files to parquet tables."""
 
-    def __init__(self, reader: Client, writer: Client, periods: int):
+    def __init__(
+        self,
+        cluster: GatewayCluster,
+        reader: Client,
+        writer: Client,
+        periods: int,
+    ):
+        self._cluster = cluster
         self._reader = reader
         self._writer = writer
         self._periods = periods
@@ -44,6 +52,7 @@ class Converter:
             f"Found {len(years)} years (from {min(years.keys())} to {max(years.keys())})"
         )
         append = False
+        client = self._cluster.get_client()
         for year in sorted(years):
             logger.info(f"Beginning {year} ({len(paths)} paths)")
             full_year_delayed = [
@@ -55,20 +64,22 @@ class Converter:
                     dask.delayed(window)(data_frame, start, end)
                     for data_frame in full_year_persisted
                 ]
-                data_frame = (
-                    dask.dataframe.from_delayed(windowed_delayed)
-                    .set_index("timestamp", divisions=[start, end])
-                    .persist()
+                data_frame = dask.dataframe.from_delayed(windowed_delayed).set_index(
+                    "timestamp", divisions=[start, end]
                 )
                 logger.info(
                     f"Writing parquet between {start} and {end} to {self._writer.adlfs_path()} (append={append})"
                 )
-                data_frame.to_parquet(
+                future = client.submit(
+                    dask.dataframe.to_parquet,
+                    data_frame,
                     self._writer.adlfs_path(),
                     append=append,
                     engine="pyarrow",
                     storage_options=self._writer.adlfs_options(),
                 )
+                future.result()
+                logger.debug("Done writing")
                 if not append:
                     append = True
 

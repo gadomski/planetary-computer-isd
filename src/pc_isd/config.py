@@ -1,7 +1,8 @@
 from typing import Optional
 
 from dask.distributed import PipInstall
-from dask_gateway import Gateway, GatewayCluster
+from dask_gateway import Gateway
+from dask_gateway.client import GatewayCluster
 from serde import serde
 from serde.toml import from_toml
 
@@ -68,26 +69,27 @@ class Config:
 
     def converter(
         self,
+        cluster: GatewayCluster,
         source_prefix: Optional[str] = None,
         source_limit: Optional[int] = None,
         target_prefix: Optional[str] = None,
     ) -> Converter:
         """Returns a converter for this configuration."""
         return Converter(
+            cluster,
             self.reader(prefix=source_prefix, limit=source_limit),
             self.writer(prefix=target_prefix),
             self.periods,
         )
 
     def start_dask_cluster(self) -> GatewayCluster:
-        """Starts a Dask cluster."""
         gateway = Gateway()
         options = gateway.cluster_options()
         if self.dask.worker_cores:
             options["worker_cores"] = self.dask.worker_cores
         if self.dask.worker_memory:
             options["worker_memory"] = self.dask.worker_memory
-        cluster = gateway.new_cluster(options)
+        cluster = gateway.new_cluster(options, shutdown_on_close=False)
         plugin = PipInstall(
             packages=[
                 "git+https://github.com/gadomski/planetary-computer-isd",
