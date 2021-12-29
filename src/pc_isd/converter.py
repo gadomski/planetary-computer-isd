@@ -77,6 +77,7 @@ class Converter:
                     append=append,
                     engine="pyarrow",
                     storage_options=self._writer.adlfs_options(),
+                    pure=False,
                 )
                 future.result()
                 logger.debug("Done writing")
