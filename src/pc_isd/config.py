@@ -93,6 +93,7 @@ class Config:
         plugin = PipInstall(
             packages=[
                 "git+https://github.com/gadomski/planetary-computer-isd",
+                "dask[distributed,dataframe] == 2021.11.2",
             ],
             pip_options=["--upgrade"],
         )
