@@ -2,7 +2,7 @@ import logging
 import os.path
 from collections import defaultdict
 from datetime import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
 import dask
 import dask.dataframe
@@ -62,7 +62,7 @@ class Converter:
             for start, end in intervals(year, self._periods):
                 windowed_delayed = [
                     dask.delayed(window)(data_frame, start, end)
-                    for data_frame in full_year_persisted
+                    for data_frame in full_year_delayed
                 ]
                 data_frame = dask.dataframe.from_delayed(windowed_delayed).set_index(
                     "timestamp", divisions=[start, end]
@@ -70,20 +70,15 @@ class Converter:
                 logger.info(
                     f"Writing parquet between {start} and {end} to {self._writer.adlfs_path()} (append={append})"
                 )
-                client.publish_dataset(data_frame=data_frame)
-                try:
-                    future = client.submit(
-                        write_to_parquet,
-                        "data_frame",
-                        self._writer.adlfs_path(),
-                        append=append,
-                        engine="pyarrow",
-                        storage_options=self._writer.adlfs_options(),
-                        pure=False,
-                    )
-                    future.result()
-                finally:
-                    client.unpublish_dataset("data_frame")
+                future = client.submit(
+                    dask.dataframe.to_parquet,
+                    data_frame,
+                    self._writer.adlfs_path(),
+                    append=append,
+                    engine="pyarrow",
+                    storage_options=self._writer.adlfs_options(),
+                )
+                future.result()
                 logger.debug("Done writing")
                 if not append:
                     append = True
@@ -112,10 +107,3 @@ def intervals(year: int, periods: int) -> List[Tuple[datetime, datetime]]:
 def window(data_frame: DataFrame, start: datetime, end: datetime) -> DataFrame:
     """Returns a copy of this data frame, reduced to fall within the given window."""
     return data_frame[data_frame["timestamp"].between(start, end, inclusive="left")]
-
-
-def write_to_parquet(name: str, *args: Any, **kwargs: Any) -> None:
-    from dask.distributed import get_client
-
-    data_frame = get_client().get_dataset(name)
-    dask.dataframe.to_parquet(data_frame, *args, **kwargs)
